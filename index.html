@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AGENTLY Launch Hub</title><meta name="robots" content="noindex,nofollow">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500&display=swap">
+<style>
+:root{--paper:#F2F2F2;--card:#fff;--ink:#7C7C7C;--ink2:#5E5E5E;--line:#DCDCDC;--grad:linear-gradient(135deg,#F87A4E,#FA9A5E 55%,#FAB66F)}
+@media (prefers-color-scheme:dark){:root{--paper:#19191A;--card:#232324;--ink:#A9A9A9;--ink2:#D2D2D2;--line:#39393B;color-scheme:dark}}
+*{box-sizing:border-box}html,body{height:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:"Onest",system-ui,sans-serif;display:grid;place-items:center;padding:0 16px}
+form{background:var(--card);border-radius:24px;padding:32px 30px;width:min(380px,100%);display:flex;flex-direction:column;gap:14px;box-shadow:0 8px 30px rgba(0,0,0,.06)}
+.mark{align-self:flex-start;border:1.5px solid var(--ink);border-radius:999px;padding:3px 14px;font-size:17px;color:var(--ink2)}
+h1{font-weight:400;font-size:24px;color:var(--ink2);margin:6px 0 0}
+p{margin:0;font-size:13px}
+input{font:inherit;border:1px solid var(--line);background:var(--paper);color:var(--ink2);border-radius:999px;padding:11px 16px}
+input:focus{outline:2px solid #F87A4E;outline-offset:1px}
+button{font:inherit;border:0;border-radius:999px;padding:11px 16px;background:var(--grad);color:#fff;cursor:pointer}
+button[disabled]{opacity:.6;cursor:wait}
+.err{color:#C24A4A;min-height:1em}
+</style></head><body>
+<form id="f" autocomplete="off">
+  <span class="mark">agently</span>
+  <h1>Launch hub</h1>
+  <p>Internal page for the AGENTLY team. Enter the password you were given.</p>
+  <label for="pw" style="position:absolute;left:-9999px">Password</label>
+  <input id="pw" type="password" placeholder="Password" autofocus>
+  <button id="go" type="submit">Open</button>
+  <p class="err" id="err" aria-live="polite"></p>
+</form>
+<script>
+const ub=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+async function open_(pw){
+  const j=await (await fetch("hub.bin.json",{cache:"no-store"})).json();
+  const k=await crypto.subtle.importKey("raw",new TextEncoder().encode(pw),"PBKDF2",false,["deriveKey"]);
+  const key=await crypto.subtle.deriveKey({name:"PBKDF2",salt:ub(j.salt),iterations:j.iter,hash:"SHA-256"},k,{name:"AES-GCM",length:256},false,["decrypt"]);
+  const html=new TextDecoder().decode(await crypto.subtle.decrypt({name:"AES-GCM",iv:ub(j.iv)},key,ub(j.data)));
+  try{sessionStorage.setItem("agently-hub-pw",pw);}catch(e){}
+  document.open();document.write(html);document.close();
+}
+document.getElementById("f").addEventListener("submit",async e=>{e.preventDefault();const b=document.getElementById("go");b.disabled=true;b.textContent="Opening…";
+  try{await open_(document.getElementById("pw").value);}catch(err){document.getElementById("err").textContent="Wrong password.";b.disabled=false;b.textContent="Open";}});
+(async()=>{let pw=null;try{pw=sessionStorage.getItem("agently-hub-pw");}catch(e){}if(pw){try{await open_(pw);}catch(e){}}})();
+</script></body></html>
